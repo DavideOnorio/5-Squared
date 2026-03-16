@@ -29,21 +29,3 @@ class DataTransformer:
         clipped_data = cls.sigma_clip(series, sigma=sigma)
         return cls.z_score(clipped_data)
     
-
-    #SEE IF THIS WORKS
-
-    """@staticmethod
-    def signed_l3_composite(df: pd.DataFrame) -> pd.Series:
-        
-        Calculates a directional L3 score.
-        Positive values are amplified, negative values are penalized.
-        
-        # Cube the values (preserves sign)
-        # x^3 makes 0.8 -> 0.512 and -0.8 -> -0.512
-        cubed_sum = np.sum(np.power(df, 3), axis=1)
-        
-        # Take the cube root while preserving the sign of the sum
-        # We use (abs(x)^(1/3)) * sign(x) to avoid math errors with negative roots
-        final_scores = np.sign(cubed_sum) * np.power(np.abs(cubed_sum), 1/3)
-        
-        return pd.Series(final_scores, index=df.index, name="directional_l3")"""

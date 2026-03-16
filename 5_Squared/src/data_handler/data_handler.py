@@ -19,6 +19,8 @@ class DataHandler:
             
         self.all_closes, self.all_volumes = source.load()
         self.all_log_returns = np.log(self.all_closes).diff()
+        self.fundamental = pd.read_excel(r"5_Squared\data\raw\Book1.xlsx", engine='openpyxl')
+        self.fundamental = self.fundamental.set_index('Ticker').rename(columns=lambda x: x.split()[0])
 
     def close(self, ticker) -> pd.Series:
         return self.all_closes[ticker]
@@ -53,4 +55,5 @@ class CSVLoader:
         volumes = data.xs("Volume", axis=1, level=0)
 
         return closes, volumes
+    
     
