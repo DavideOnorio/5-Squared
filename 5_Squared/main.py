@@ -3,7 +3,6 @@ from src.data_handler.preprocessing import DataTransformer
 from src.data_handler.data_handler import DataHandler
 from src.signals.ranker import Ranker
 from src.optimization.get_weights import Get_Weights
-import pandas as pd
 
 
 mo = Momentum()
@@ -11,4 +10,4 @@ a = DataTransformer()
 b = DataHandler()
 r = Ranker()
 c = Get_Weights()
-print(c.corr)
+print(c.weights)

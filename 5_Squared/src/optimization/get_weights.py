@@ -17,7 +17,7 @@ class Get_Weights:
     def _hrp(self):
         
         valid    = [t for t in self.scores.index if t in self.corr.columns]
-        tickers  = self.scores[valid].sort_values(ascending=False).head(200).index.tolist()
+        tickers  = self.scores[valid].sort_values(ascending=False).head(50).index.tolist()
 
         # Here we start to Cluster
         # We convert the correlation into a distance, since the correlation is [-1 , 1] we need to have a proper distance [0, 1]

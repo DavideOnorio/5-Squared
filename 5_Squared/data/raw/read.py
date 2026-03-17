@@ -1,5 +1,6 @@
-import pandas as pd
+import bql
 
-df = pd.read_csv(r"5_Squared\data\raw\data.csv")
-
-print(df)
+bq = bql.Service()
+members = bq.execute(
+    bql.Request("SPX Index", bql.data.members(), dates="2018-01-01")
+)

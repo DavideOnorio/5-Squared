@@ -16,14 +16,13 @@ class Ranker:
                 .pipe(lambda df: df.fillna(df.mean()))
                 .apply(self.tr.scale))
         
-        self.score = self.signed_l3_composite(self.full_df).sort_values(ascending=False)
+        self.score = self.signed_lp_composite(self.full_df).sort_values(ascending=False)
 
-    def signed_l3_composite(self, df: pd.DataFrame) -> pd.Series:
-
-        cubed_sum = np.sum(np.power(df, 3), axis=1)
-        final_scores = np.sign(cubed_sum) * np.power(np.abs(cubed_sum), 1/3)
-
-        return pd.Series(final_scores, index=df.index, name="directional_l3")
+    def signed_lp_composite(self, df: pd.DataFrame, p: float = 0.5) -> pd.Series:
+        signed_pow = np.sign(df) * np.power(np.abs(df), p)
+        agg = signed_pow.sum(axis=1)
+        final_scores = np.sign(agg) * np.power(np.abs(agg), 1 / p)
+        return pd.Series(final_scores, index=self.full_df.index, name=f"directional_l{p}")
 
 
     
