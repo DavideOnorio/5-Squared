@@ -5,8 +5,9 @@ from src.data_handler.data_handler import DataHandler
 class Momentum:
     def __init__(self):
         self.handler = DataHandler()
-        self.lookback = 252
-        self.skip = 21
+        # I changed to weekly data
+        self.lookback = 52
+        self.skip = 4
     
     def momentum_factor(self) -> pd.DataFrame:
 

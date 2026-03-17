@@ -9,5 +9,6 @@ mo = Momentum()
 a = DataTransformer()
 b = DataHandler()
 r = Ranker()
-c = Get_Weights()
-print(c.weights)
+w = Get_Weights()
+
+print(w.weights)

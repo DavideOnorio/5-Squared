@@ -9,36 +9,48 @@ class Get_Weights:
     def __init__(self):
         self.df = DataHandler()
         self.r = Ranker()
-        self.returns = self.df.all_log_returns[-252:]
+        self.tickers = self.r.score.index.tolist()
+        self.returns = self.df.all_log_returns[-50:][self.tickers]
         self.corr = self.returns.corr()
+        self.corr = self.corr.loc[~self.corr.index.duplicated(), ~self.corr.columns.duplicated()]
         self.scores = self.r.score
         self.weights = self._hrp()
 
     def _hrp(self):
         
         valid    = [t for t in self.scores.index if t in self.corr.columns]
-        tickers  = self.scores[valid].sort_values(ascending=False).head(50).index.tolist()
+        # We define our target tickers here
+        tickers = self.scores[valid].sort_values(ascending=False).head(50).index.unique().tolist()
 
         # Here we start to Cluster
         # We convert the correlation into a distance, since the correlation is [-1 , 1] we need to have a proper distance [0, 1]
-        dist = np.sqrt((1 - self.corr.loc[tickers, tickers]) / 2)
+        # We MUST slice both matrices and the ticker list to be identical in length
+        adj_corr = self.corr.loc[tickers, tickers].copy()
+        adj_cov  = self.returns[tickers].cov().copy()
+        n_tickers = len(tickers) 
+
+        dist = np.sqrt((1 - adj_corr) / 2)
         # we converts the N×N distance matrix into a 1D array, then builds the dendrogram using Ward's criterion 
+        # Crucial: we pass dist.values to ensure no index confusion from pandas
         link = linkage(squareform(dist.values, checks=False), method='ward')
 
-        def quasi_diag(link, n):
-            link    = link.astype(int)
-            sort_ix = pd.Series([link[-1, 0], link[-1, 1]])
+        def quasi_diag(link_mat, n):
+            link_mat = link_mat.astype(int)
+            sort_ix = pd.Series([link_mat[-1, 0], link_mat[-1, 1]])
             while sort_ix.max() >= n:
                 sort_ix.index = range(0, len(sort_ix) * 2, 2)
                 temp          = sort_ix[sort_ix >= n]
-                sort_ix[temp.index] = link[temp.values - n, 0]
-                sort_ix = pd.concat([sort_ix, pd.Series(link[temp.values - n, 1], index=temp.index + 1)])
+                
+                res_i = temp.index
+                res_v = temp.values - n # If n is 50, and max is 100, this maps to row 50
+                
+                sort_ix[res_i] = link_mat[res_v, 0]
+                sort_ix = pd.concat([sort_ix, pd.Series(link_mat[res_v, 1], index=res_i + 1)])
                 sort_ix = sort_ix.sort_index().reset_index(drop=True)
-            return dist.columns[sort_ix.tolist()].tolist()
+            return [tickers[i] for i in sort_ix.tolist()]
         
         # Recursive bisection
-        cov      = self.returns[tickers].cov()
-        ordered  = quasi_diag(link, len(tickers))
+        ordered  = quasi_diag(link, n_tickers)
         w        = pd.Series(1.0, index=ordered)
         clusters = [ordered]
 
@@ -49,19 +61,17 @@ class Get_Weights:
             for i in range(0, len(clusters), 2):
                 l, r = clusters[i], clusters[i+1]
                 def var(items):
-                    sub = cov.loc[items, items]
+                    sub = adj_cov.loc[items, items]
                     iw  = 1 / np.diag(sub.values)
                     iw /= iw.sum()
                     return float(iw @ sub.values @ iw)
-                alloc = 1 - var(l) / (var(l) + var(r))
+                
+                v_l, v_r = var(l), var(r)
+                alloc = 1 - v_l / (v_l + v_r)
                 w[l] *= alloc
                 w[r] *= (1 - alloc)
 
         # Tilt by score
         w = w * (self.scores[tickers] / self.scores[tickers].sum())
         return (w / w.sum()).sort_values(ascending=False).round(2)
-
-
-
-        
 
