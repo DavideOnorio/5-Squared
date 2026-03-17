@@ -3,12 +3,13 @@ from src.data_handler.preprocessing import DataTransformer
 from src.data_handler.data_handler import DataHandler
 from src.signals.ranker import Ranker
 from src.optimization.get_weights import Get_Weights
+from src.backtest.portfolio import Backtest
 
-
-mo = Momentum()
-a = DataTransformer()
 b = DataHandler()
+mo = Momentum()
 r = Ranker()
 w = Get_Weights()
+b = Backtest()
 
-print(w.weights)
+#b.run()
+print(b.backtest_df)

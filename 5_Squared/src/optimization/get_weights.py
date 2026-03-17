@@ -10,7 +10,7 @@ class Get_Weights:
         self.df = DataHandler()
         self.r = Ranker()
         self.tickers = self.r.score.index.tolist()
-        self.returns = self.df.all_log_returns[-50:][self.tickers]
+        self.returns = self.df.all_log_returns[-52:][self.tickers]
         self.corr = self.returns.corr()
         self.corr = self.corr.loc[~self.corr.index.duplicated(), ~self.corr.columns.duplicated()]
         self.scores = self.r.score
