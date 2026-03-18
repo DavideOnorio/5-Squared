@@ -21,6 +21,10 @@ class Backtest:
         self.delisted = self._is_delisted()
         self.backtest_df = self.backtest_df.drop(columns=self.delisted, errors='ignore')
 
+        #We need to check for a better way to do this
+        closest_date = self.fundamental.index[self.fundamental.index >= self.start_date][0] 
+        self.fund_backtest = self.fundamental.loc[self.fundamental.index == closest_date, self.fundamental.columns.isin(self.backtest_df.columns)]
+
     def _filter_tickers(self, year: int):
         tickers = self.full_tickers[year].dropna().tolist()
         valid_tickers = [t for t in tickers if t in self.backtest_df.columns]
@@ -34,6 +38,8 @@ class Backtest:
     def _swap_to_backtest(self):
         self.d.all_closes = self.backtest_df
         self.d.all_log_returns = np.log(self.backtest_df / self.backtest_df.shift(1))
+        self.d.fundamental = self.fund_backtest
+        
 
     def _restore(self):
         self.d.all_closes = self.df
@@ -47,9 +53,13 @@ class Backtest:
         mo = Momentum()
         mo.momentum_factor
         r = Ranker()
-        #w = Get_Weights()
+        w = Get_Weights()
 
-        print(r.score)
+        print(b.all_closes)
+
+        print(self.df)
+        
+        
 
         self._restore()
 

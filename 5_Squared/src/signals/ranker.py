@@ -17,8 +17,9 @@ class Ranker:
                 .apply(self.tr.scale))
         
         self.score = self.signed_lp_composite(self.full_df).sort_values(ascending=False)
+        self.score = self.score[~self.score.index.duplicated(keep='first')]
 
-    def signed_lp_composite(self, df: pd.DataFrame, p: float = 0.5) -> pd.Series:
+    def signed_lp_composite(self, df: pd.DataFrame, p: float = 1) -> pd.Series:
         signed_pow = np.sign(df) * np.power(np.abs(df), p)
         agg = signed_pow.sum(axis=1)
         final_scores = np.sign(agg) * np.power(np.abs(agg), 1 / p)

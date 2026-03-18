@@ -17,8 +17,8 @@ class DataHandler:
         
         base_path = Path("5_Squared") / "data" / "raw"
 
-        self.fundamental = pd.read_excel(base_path / "with_roe.xlsx", engine='openpyxl')
-        self.fundamental = self.fundamental.set_index('Ticker').rename(columns=lambda x: x.split()[0])
+        self.fundamental = pd.read_excel(base_path / "fundam_5y.xlsx", engine='openpyxl')
+        self.fundamental = self.fundamental.set_index(pd.to_datetime(self.fundamental.iloc[:, 0])).iloc[:, 1:].rename_axis('date').rename(columns=lambda x: x.split()[0])
 
         self.all_closes = pd.read_excel(base_path / "sep500_5y.xlsx", engine='openpyxl')
         self.all_closes["Date"] = pd.to_datetime(self.all_closes["Date"], unit="D", origin="1899-12-30")
@@ -27,7 +27,7 @@ class DataHandler:
         self.SPY = self.all_closes['SPX']
         self.all_closes = self.all_closes.drop(columns=['SPX'])
 
-        self.ticker_list = pd.read_excel(r"5_Squared\data\raw\full_stocks_5y.xlsx", engine='openpyxl')
+        self.ticker_list = pd.read_excel(base_path / "full_stocks_5y.xlsx", engine='openpyxl')
         self.ticker_list = self.ticker_list.map(lambda x: x.split()[0] if isinstance(x, str) else x)
 
         self.all_log_returns = np.log(self.all_closes / self.all_closes.shift(1))
