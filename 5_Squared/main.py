@@ -14,3 +14,4 @@ b = Backtest()
 
 b.run()
 
+print(b.cum_portfolio)
