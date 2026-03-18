@@ -62,10 +62,10 @@ class Get_Weights:
         w = w * (self.scores[tickers] / self.scores[tickers].sum())
         w = w / w.sum()
         w = w.clip(upper=0.05)
-        return (w / w.sum()).sort_values(ascending=False).round(2)
+        return (w / w.sum()).sort_values(ascending=False).round(4)
 
 
-    def opt_sharpe_beta(self, rf = 0.02, beta_penalty = 0.05, max_weight = 0.1, period = 'Annual', annualize = True):
+    def opt_sharpe_beta(self, rf = 0.02, beta_penalty = 0.05, max_weight = 0.1, period = 'Annual', annualize = False):
         valid   = [t for t in self.scores.index if t in self.corr.columns]
         tickers = self.scores[valid].sort_values(ascending=False).head(50).index.unique().tolist()
 
@@ -110,7 +110,7 @@ class Get_Weights:
             raise ValueError(f'Optimization failed: {res.message}')
 
         w_opt = pd.Series(res.x, index = tickers, name = 'weight')
-        w_opt = w_opt[w_opt > 1e-8].sort_values(ascending=False)
+        w_opt = w_opt.sort_values(ascending=False).round(4)
 
         summary = metrics.summary(res.x, beta_penalty=beta_penalty, annualize=annualize)
         summary['Number of Holdings'] = int((w_opt > 1e-8).sum())

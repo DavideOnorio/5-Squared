@@ -53,9 +53,8 @@ class PortfolioMetrics:
         return float(sharpe)
 
     def implied_alpha(self, w, annualize):
-        """
-        Jensen's alpha in the same return frequency as inputs unless annualize=True.
-        """
+        # Jensen's alpha in the same return frequency as inputs unless annualize=True.
+
         port_ret = self.portfolio_return(w, annualize)
         beta = self.portfolio_beta(w)
 
@@ -78,6 +77,6 @@ class PortfolioMetrics:
             "Volatility": self.portfolio_std(w, annualize=annualize),
             "Sharpe Ratio": float(sharpe),
             "Beta": float(beta),
-            "Implied Excess Alpha vs benchmark (S&P 500 Index)": self.implied_alpha(w, annualize=annualize),
+            "Implied Excess Returns vs benchmark (S&P 500 Index)": self.implied_alpha(w, annualize=annualize),
             "Objective Value": float(-self.sharpe_ratio(w, annualize=annualize) + beta_penalty * beta),
         }
