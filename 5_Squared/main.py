@@ -14,4 +14,4 @@ b = Backtest()
 
 b.run()
 
-print(b.cum_portfolio)
+print(b.port_return)

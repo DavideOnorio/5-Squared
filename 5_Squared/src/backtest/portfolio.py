@@ -104,13 +104,7 @@ class Backtest:
         portfolio_return = pd.concat(all_returns)
         index_b = self.index.loc[self.start_date:]
 
+        self.port_return = portfolio_return["portfolio_return"]
         self.cum_portfolio = (1 + portfolio_return["portfolio_return"]).cumprod() - 1
         self.cum_index = (1 + index_b).cumprod() - 1
-
-        plt.figure(figsize=(12, 6))
-        plt.plot(self.cum_portfolio.index, self.cum_portfolio, label="Portfolio", linewidth=2)
-        plt.plot(self.cum_index.index, self.cum_index, label="S&P 500", linewidth=2)
-        plt.title("Quarterly Rebalance")
-        plt.legend()
-        plt.show()
         
