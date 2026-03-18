@@ -16,9 +16,9 @@ class Get_Weights:
         self.corr = self.corr.loc[~self.corr.index.duplicated(), ~self.corr.columns.duplicated()]
         self.scores = self.r.score
         self.weights = self._hrp()
-        weights, summary = self.opt_treynor_beta()
-        self.opt_weights = weights
-        self.opt_summary = summary
+        #weights, summary = self.opt_treynor_beta()
+        #self.opt_weights = weights
+        #self.opt_summary = summary
 
     def _hrp(self):
         
@@ -80,7 +80,7 @@ class Get_Weights:
         return (w / w.sum()).sort_values(ascending=False).round(2)
 
 
-    def opt_treynor_beta(self, rf = 0.02, beta_penalty = 0.05, max_weight = 0.10, period = 'Annual', annualize = True):
+    """def opt_treynor_beta(self, rf = 0.02, beta_penalty = 0.05, max_weight = 0.10, period = 'Annual', annualize = True):
         valid   = [t for t in self.scores.index if t in self.corr.columns]
         tickers = self.scores[valid].sort_values(ascending=False).head(50).index.unique().tolist()
 
@@ -178,3 +178,4 @@ class Get_Weights:
 
         return w_opt, summary
 
+"""
