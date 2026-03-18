@@ -4,11 +4,10 @@ from src.optimization.get_weights import GetWeights
 from src.data_handler.data_handler import DataHandler
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 class Backtest:
-    def __init__(self, start_date: str = '2023-04-25'):
+    def __init__(self, start_date: str = '2022-08-25'):
         self.d = DataHandler()
 
         self.df = self.d.all_closes
@@ -81,8 +80,13 @@ class Backtest:
         return filtered.dot(weights[valid_tickers]).to_frame(name="portfolio_return")
 
     def run(self) -> pd.Series:
+
+        fund_dates = self.fundamental.index.unique().sort_values()
+        prior = fund_dates[fund_dates <= self.start_date]
+        first_date = prior[-1] if len(prior) > 0 else fund_dates[0]
+
         rebal_dates = sorted(
-            self.fundamental.index[self.fundamental.index >= self.start_date].unique().tolist()
+            fund_dates[fund_dates >= first_date].tolist()
         )
         all_returns = []
 
@@ -109,18 +113,3 @@ class Backtest:
         self.cum_index = (1 + index_b).cumprod() - 1
 
         return self.port_return
-
-    def plot(self):
-        if self.cum_portfolio is None:
-            raise RuntimeError("Call run() before plot().")
-
-        plt.figure(figsize=(12, 6))
-        plt.plot(self.cum_portfolio.index, self.cum_portfolio, label="Portfolio", linewidth=2)
-        plt.plot(self.cum_index.index, self.cum_index, label="S&P 500", linewidth=2)
-        plt.xlabel("Date")
-        plt.ylabel("Cumulative Return")
-        plt.title("Portfolio vs S&P 500 — Quarterly Rebalance")
-        plt.legend()
-        plt.grid(True)
-        plt.tight_layout()
-        plt.show()

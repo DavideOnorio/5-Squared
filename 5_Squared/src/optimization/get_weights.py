@@ -5,7 +5,7 @@ from scipy.spatial.distance import squareform
 
 
 class GetWeights:
-    def __init__(self, log_returns: pd.DataFrame, scores: pd.Series, lookback: int = 52, top_n: int = 50, max_weight: float = 0.08):
+    def __init__(self, log_returns: pd.DataFrame, scores: pd.Series, lookback: int = 52, top_n: int = 50, max_weight: float = 0.05):
         self.scores = scores
         self.returns = log_returns[-lookback:].dropna(axis=1)
         self.corr = self.returns.corr()
