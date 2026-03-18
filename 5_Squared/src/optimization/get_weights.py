@@ -22,15 +22,24 @@ class Get_Weights:
         self.scores = self.r.score
         
         self.weights = self._hrp()
+<<<<<<< HEAD
         self.beta_penalized_weights, self.beta_penalized_summary = self.opt_sharpe_beta()
         self.alpha_opt_weights, self.alpha_opt_summary = self.opt_alpha()
         self.alpha_from_hrp_weights, self.alpha_from_hrp_summary = self.opt_alpha_from_hrp()
+=======
+        
+        """weights, summary = self.opt_sharpe_beta()
+        self.opt_weights = weights
+        self.opt_summary = summary"""
+>>>>>>> 381b2d54a8710959f641b4407a2d9b1ef2dc459f
 
     def _hrp(self):
         valid   = [t for t in self.scores.index if t in self.corr.columns]
-        tickers = self.scores[valid].sort_values(ascending=False).head(100).index.unique().tolist()
+        tickers = self.scores[valid].sort_values(ascending=False).head(50).index.unique().tolist()
 
         adj_corr = self.corr.loc[tickers, tickers].dropna(axis=0).dropna(axis=1)
+        adj_corr = adj_corr.loc[~adj_corr.index.duplicated(), ~adj_corr.columns.duplicated()]
+
         tickers  = adj_corr.columns.tolist()
         adj_cov  = self.returns[tickers].cov()
 
@@ -64,7 +73,11 @@ class Get_Weights:
         return (w / w.sum()).sort_values(ascending=False).round(4)
 
 
+<<<<<<< HEAD
     def opt_sharpe_beta(self, rf = 0.02, beta_penalty = 0.05, max_weight = 0.1, annualize = False):
+=======
+    """def opt_sharpe_beta(self, rf = 0.02, beta_penalty = 0.05, max_weight = 0.1, period = 'Annual', annualize = True):
+>>>>>>> 381b2d54a8710959f641b4407a2d9b1ef2dc459f
         valid   = [t for t in self.scores.index if t in self.corr.columns]
         tickers = self.scores[valid].sort_values(ascending=False).head(100).index.unique().tolist()
 
@@ -117,6 +130,7 @@ class Get_Weights:
         self.beta_penalized_weights = w_opt
         self.beta_penalized_summary = summary
 
+<<<<<<< HEAD
         return w_opt, summary
 
             
@@ -240,3 +254,6 @@ class Get_Weights:
 
         return w_opt, summary
     
+=======
+        return w_opt, summary"""
+>>>>>>> 381b2d54a8710959f641b4407a2d9b1ef2dc459f

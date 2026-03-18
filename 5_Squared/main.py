@@ -15,7 +15,12 @@ w = Get_Weights()
 b = Backtest()
 
 b.run()
+<<<<<<< HEAD
 print(w.weights)
 print(w.beta_penalized_weights, w.beta_penalized_summary)
 print(w.alpha_opt_weights,w.alpha_opt_summary)
 print(w.alpha_from_hrp_weights,w.alpha_from_hrp_summary)  
+=======
+
+print(b.cum_portfolio)
+>>>>>>> 381b2d54a8710959f641b4407a2d9b1ef2dc459f
