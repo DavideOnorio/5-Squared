@@ -73,11 +73,11 @@ class PortfolioMetrics:
         beta = self.portfolio_beta(w)
 
         return {
-            "Expected Return of the Portfolio": self.portfolio_return(w, annualize=annualize),
-            "Expected Return of the Benchmark (S&P 500 Index)": self.benchmark_return(annualize=annualize),
+            "Return of the Portfolio": self.portfolio_return(w, annualize=annualize),
+            "Return of the Benchmark (S&P 500 Index)": self.benchmark_return(annualize=annualize),
             "Volatility": self.portfolio_std(w, annualize=annualize),
             "Sharpe Ratio": float(sharpe),
             "Beta": float(beta),
-            "Alpha vs benchmark (S&P 500 Index)": self.implied_alpha(w, annualize=annualize),
+            "Implied Excess Alpha vs benchmark (S&P 500 Index)": self.implied_alpha(w, annualize=annualize),
             "Objective Value": float(-self.sharpe_ratio(w, annualize=annualize) + beta_penalty * beta),
         }

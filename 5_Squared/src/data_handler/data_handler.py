@@ -26,6 +26,7 @@ class DataHandler:
         
         self.SPY = self.all_closes['SPX']
         self.all_closes = self.all_closes.drop(columns=['SPX'])
+        self.r_index = np.log(self.SPY/self.SPY.shift(1))
 
         self.ticker_list = pd.read_excel(base_path / "full_stocks_5y.xlsx", engine='openpyxl')
         self.ticker_list = self.ticker_list.map(lambda x: x.split()[0] if isinstance(x, str) else x)
