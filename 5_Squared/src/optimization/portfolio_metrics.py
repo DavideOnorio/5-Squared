@@ -23,7 +23,7 @@ class PortfolioMetrics:
 
         if self.bench_var <= 1e-12:
             raise ValueError("Benchmark variance is too close to zero.")
-
+    
     def portfolio_return(self, w, annualize):
         rp = float(w @ self.mu)
         return rp * self.periods_per_year if annualize else rp
@@ -53,9 +53,8 @@ class PortfolioMetrics:
         return float(sharpe)
 
     def implied_alpha(self, w, annualize):
-        """
-        Jensen's alpha in the same return frequency as inputs unless annualize=True.
-        """
+        # Jensen's alpha in the same return frequency as inputs unless annualize=True.
+
         port_ret = self.portfolio_return(w, annualize)
         beta = self.portfolio_beta(w)
 
@@ -68,7 +67,7 @@ class PortfolioMetrics:
     def benchmark_return(self, annualize):
         return self.bench_mean * self.periods_per_year if annualize else self.bench_mean
 
-    def summary(self, w, beta_penalty, annualize):
+    '''def summary(self, w, beta_penalty, annualize):
         sharpe = self.sharpe_ratio(w, annualize=annualize)
         beta = self.portfolio_beta(w)
 
@@ -78,6 +77,21 @@ class PortfolioMetrics:
             "Volatility": self.portfolio_std(w, annualize=annualize),
             "Sharpe Ratio": float(sharpe),
             "Beta": float(beta),
-            "Implied Excess Alpha vs benchmark (S&P 500 Index)": self.implied_alpha(w, annualize=annualize),
+            "Implied Excess Returns vs benchmark (S&P 500 Index)": self.implied_alpha(w, annualize=annualize),
             "Objective Value": float(-self.sharpe_ratio(w, annualize=annualize) + beta_penalty * beta),
+        }'''
+    
+    def summary(self, w: np.ndarray, objective_value: float | None = None, annualize: bool = True) -> dict:
+        summary = {
+            "Expected Return of the Portfolio": self.portfolio_return(w, annualize=annualize),
+            "Expected Return of the Benchmark (S&P 500 Index)": self.benchmark_return(annualize=annualize),
+            "Volatility": self.portfolio_std(w, annualize=annualize),
+            "Sharpe Ratio": self.sharpe_ratio(w, annualize=annualize),
+            "Beta": self.portfolio_beta(w),
+            "Alpha vs benchmark (S&P 500 Index)": self.implied_alpha(w, annualize=annualize),
         }
+
+        if objective_value is not None:
+            summary["Objective Value"] = float(objective_value)
+
+        return summary
