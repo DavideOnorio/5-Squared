@@ -13,4 +13,4 @@ w = Get_Weights()
 b = Backtest()
 
 b.run()
-print(w.opt_weights, w.opt_summary)
+
