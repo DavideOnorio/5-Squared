@@ -1,3 +1,4 @@
+from pathlib import Path
 import pandas as pd
 import numpy as np
 
@@ -13,10 +14,13 @@ class DataHandler:
     def __init__(self):
         if self._initialized:
             return
-        self.fundamental = pd.read_excel(r"5_Squared\data\raw\with_roe.xlsx", engine='openpyxl')
+        
+        base_path = Path("5_Squared") / "data" / "raw"
+
+        self.fundamental = pd.read_excel(base_path / "with_roe.xlsx", engine='openpyxl')
         self.fundamental = self.fundamental.set_index('Ticker').rename(columns=lambda x: x.split()[0])
 
-        self.all_closes = pd.read_excel(r"5_Squared\data\raw\sep500_5y.xlsx", engine='openpyxl')
+        self.all_closes = pd.read_excel(base_path / "sep500_5y.xlsx", engine='openpyxl')
         self.all_closes["Date"] = pd.to_datetime(self.all_closes["Date"], unit="D", origin="1899-12-30")
         self.all_closes = self.all_closes.set_index("Date").rename(columns=lambda x: x.split()[0]).apply(pd.to_numeric, errors="coerce")
         
@@ -26,7 +30,6 @@ class DataHandler:
         self.all_log_returns = np.log(self.all_closes / self.all_closes.shift(1))
         self._initialized = True
 
-        
 
     def close(self, ticker) -> pd.Series:
         return self.all_closes[ticker]
