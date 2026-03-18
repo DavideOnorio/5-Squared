@@ -1,83 +1,97 @@
-from src.data_handler.data_handler import DataHandler
-from scipy.cluster.hierarchy import linkage
-from scipy.spatial.distance import squareform
-from scipy.cluster.hierarchy import leaves_list
-from src.signals.ranker import Ranker
-from src.optimization.portfolio_metrics import PortfolioMetrics
 import pandas as pd
 import numpy as np
-from scipy.optimize import minimize
+from scipy.cluster.hierarchy import linkage, leaves_list
+from scipy.spatial.distance import squareform
 
-class Get_Weights:
-    def __init__(self):
-        self.df = DataHandler()
-        self.r = Ranker()
 
-        self.tickers = self.r.score.index.tolist()
-        
-        self.returns = self.df.all_log_returns[-52:][self.tickers].dropna(axis=1)
-
+class GetWeights:
+    def __init__(self, log_returns: pd.DataFrame, scores: pd.Series, lookback: int = 52, top_n: int = 50, max_weight: float = 0.08):
+        self.scores = scores
+        self.returns = log_returns[-lookback:].dropna(axis=1)
         self.corr = self.returns.corr()
-        
-        self.scores = self.r.score
-        
+        self.top_n = top_n
+        self.max_weight = max_weight
+
         self.weights = self._hrp()
-<<<<<<< HEAD
-        self.beta_penalized_weights, self.beta_penalized_summary = self.opt_sharpe_beta()
-        self.alpha_opt_weights, self.alpha_opt_summary = self.opt_alpha()
-        self.alpha_from_hrp_weights, self.alpha_from_hrp_summary = self.opt_alpha_from_hrp()
-=======
-        
-        """weights, summary = self.opt_sharpe_beta()
-        self.opt_weights = weights
-        self.opt_summary = summary"""
->>>>>>> 381b2d54a8710959f641b4407a2d9b1ef2dc459f
 
-    def _hrp(self):
-        valid   = [t for t in self.scores.index if t in self.corr.columns]
-        tickers = self.scores[valid].sort_values(ascending=False).head(50).index.unique().tolist()
+    def _select_tickers(self) -> tuple[pd.DataFrame, pd.DataFrame]:
+        valid = [t for t in self.scores.index if t in self.corr.columns]
+        tickers = (
+            self.scores[valid]
+            .sort_values(ascending=False)
+            .head(self.top_n)
+            .index.unique()
+            .tolist()
+        )
 
-        adj_corr = self.corr.loc[tickers, tickers].dropna(axis=0).dropna(axis=1)
-        adj_corr = adj_corr.loc[~adj_corr.index.duplicated(), ~adj_corr.columns.duplicated()]
+        corr = self.corr.loc[tickers, tickers].dropna(axis=0).dropna(axis=1)
+        corr = corr.loc[~corr.index.duplicated(), ~corr.columns.duplicated()]
 
-        tickers  = adj_corr.columns.tolist()
-        adj_cov  = self.returns[tickers].cov()
+        tickers = corr.columns.tolist()
+        cov = self.returns[tickers].cov()
+        return corr, cov
 
-        # Cluster
-        dist = np.sqrt((1 - adj_corr) / 2)
+    def _cluster_order(self, corr: pd.DataFrame) -> list[str]:
+        dist = np.sqrt((1 - corr) / 2)
         link = linkage(squareform(dist.values, checks=False), method='ward')
-
-        # Sort by dendrogram
         order = leaves_list(link)
-        tickers = [tickers[i] for i in order]
+        return [corr.columns[i] for i in order]
 
-        # Recursive bisection
+    @staticmethod
+    def _cluster_variance(cov: pd.DataFrame, items: list[str]) -> float:
+        sub = cov.loc[items, items]
+        inv_w = 1 / np.diag(sub.values)
+        inv_w /= inv_w.sum()
+        return float(inv_w @ sub.values @ inv_w)
+
+    def _recursive_bisection(self, tickers: list[str], cov: pd.DataFrame) -> pd.Series:
         w = pd.Series(1.0, index=tickers)
         clusters = [tickers]
         while clusters:
-            clusters = [c[i:j] for c in clusters for i, j in [(0, len(c)//2), (len(c)//2, len(c))] if len(c) > 1]
+            clusters = [
+                c[i:j]
+                for c in clusters
+                for i, j in [(0, len(c) // 2), (len(c) // 2, len(c))]
+                if len(c) > 1
+            ]
             for i in range(0, len(clusters), 2):
-                l, r = clusters[i], clusters[i+1]
-                def var(items):
-                    sub = adj_cov.loc[items, items]
-                    iw  = 1 / np.diag(sub.values); iw /= iw.sum()
-                    return float(iw @ sub.values @ iw)
-                v_l, v_r = var(l), var(r)
-                w[l] *= 1 - v_l / (v_l + v_r)
-                w[r] *= v_l / (v_l + v_r)
+                left, right = clusters[i], clusters[i + 1]
+                v_l = self._cluster_variance(cov, left)
+                v_r = self._cluster_variance(cov, right)
+                w[left] *= 1 - v_l / (v_l + v_r)
+                w[right] *= v_l / (v_l + v_r)
+        return w
 
-        # Score tilt + 5% cap
-        w = w * (self.scores[tickers] / self.scores[tickers].sum())
-        w = w / w.sum()
-        w = w.clip(upper=0.05)
+    def _apply_score_tilt(self, w: pd.Series) -> pd.Series:
+        s = self.scores[w.index]
+        s = (s - s.min() + 1e-8) ** 0.3
+        tilted = w * s
+        return tilted / tilted.sum()
+
+    def _cap_weights(self, w: pd.Series) -> pd.Series:
+        w = w.copy()
+        for _ in range(10):
+            breach = w[w > self.max_weight]
+            if breach.empty:
+                break
+            w[breach.index] = self.max_weight
+            under = w[w < self.max_weight]
+            w[under.index] *= (1 - len(breach) * self.max_weight) / under.sum()
+        return w
+
+    def _hrp(self) -> pd.Series:
+        corr, cov = self._select_tickers()
+        tickers = self._cluster_order(corr)
+        cov = cov.loc[tickers, tickers]
+
+        w = self._recursive_bisection(tickers, cov)
+        w = self._apply_score_tilt(w)
+        w = self._cap_weights(w)
+
         return (w / w.sum()).sort_values(ascending=False).round(4)
 
 
-<<<<<<< HEAD
-    def opt_sharpe_beta(self, rf = 0.02, beta_penalty = 0.05, max_weight = 0.1, annualize = False):
-=======
-    """def opt_sharpe_beta(self, rf = 0.02, beta_penalty = 0.05, max_weight = 0.1, period = 'Annual', annualize = True):
->>>>>>> 381b2d54a8710959f641b4407a2d9b1ef2dc459f
+    """def opt_sharpe_beta(self, rf = 0.02, beta_penalty = 0.05, max_weight = 0.1, annualize = False):
         valid   = [t for t in self.scores.index if t in self.corr.columns]
         tickers = self.scores[valid].sort_values(ascending=False).head(100).index.unique().tolist()
 
@@ -130,17 +144,16 @@ class Get_Weights:
         self.beta_penalized_weights = w_opt
         self.beta_penalized_summary = summary
 
-<<<<<<< HEAD
         return w_opt, summary
-
+"""
             
-    def opt_alpha( self, rf: float = 0.02, max_weight: float = 0.05, top_n: int = 50, risk_penalty: float = 0.0, annualize: bool = False):
-        """
+    """def opt_alpha( self, rf: float = 0.02, max_weight: float = 0.05, top_n: int = 50, risk_penalty: float = 0.0, annualize: bool = False):
+        
         Pure alpha optimizer:
             max alpha_p - risk_penalty * variance_p
 
         If risk_penalty = 0, this is pure alpha maximization.
-        """
+    
         valid = [t for t in self.scores.index if t in self.corr.columns]
         tickers = self.scores.loc[valid].sort_values(ascending=False).head(top_n).index.unique().tolist()
 
@@ -194,10 +207,10 @@ class Get_Weights:
 
     def opt_alpha_from_hrp(self, rf: float = 0.02, max_weight: float = 0.05,top_n: int = 50, risk_penalty: float = 0.0, hrp_penalty: float = 0.05,
         annualize: bool = False):
-        """
+        
         HRP-anchored alpha optimizer:
             max alpha_p - risk_penalty * variance_p - hrp_penalty * ||w - w_hrp||^2
-        """
+        
         w_hrp = self._hrp()
 
         tickers = w_hrp.index.tolist()
@@ -213,9 +226,9 @@ class Get_Weights:
         if n * max_weight < 1 - 1e-12:
             raise ValueError(
                 f"Infeasible optimization: {n} assets with max_weight={max_weight:.2%} cannot sum to 100%."
-            )
+            )"""
 
-        def objective(w):
+"""        def objective(w):
             alpha = metrics.implied_alpha(w, annualize=False)
             variance = float(w @ metrics.cov @ w)
             hrp_distance = float(np.sum((w - w_hrp_vec) ** 2))
@@ -254,6 +267,4 @@ class Get_Weights:
 
         return w_opt, summary
     
-=======
-        return w_opt, summary"""
->>>>>>> 381b2d54a8710959f641b4407a2d9b1ef2dc459f
+"""

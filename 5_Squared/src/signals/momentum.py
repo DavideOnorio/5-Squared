@@ -1,19 +1,14 @@
 import pandas as pd
-from src.data_handler.data_handler import DataHandler
 
-#we make this skip to compute momentum in the "Fama"'s way, we should write something about this better
 class Momentum:
-    def __init__(self):
-        self.handler = DataHandler()
-        # I changed to weekly data
-        self.lookback = 52
-        self.skip = 4
-    
-    def momentum_factor(self) -> pd.DataFrame:
+    def __init__(self, log_returns: pd.DataFrame, lookback: int = 52, skip: int = 4):
+        self.log_returns = log_returns
+        self.lookback = lookback
+        self.skip = skip
 
-        log_returns = self.handler.all_log_returns.shift(1)
-        full_window_sum = log_returns.rolling(window=self.lookback).sum()
-        skip_window_sum = log_returns.rolling(window=self.skip).sum()
+    def momentum_factor(self) -> pd.Series:
+        shifted = self.log_returns.shift(1)
+        full_window_sum = shifted.rolling(window=self.lookback).sum()
+        skip_window_sum = shifted.rolling(window=self.skip).sum()
         mom_factor = full_window_sum - skip_window_sum
-
         return mom_factor.iloc[-1]
