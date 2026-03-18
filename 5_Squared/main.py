@@ -6,11 +6,11 @@ from src.optimization.get_weights import Get_Weights
 from src.backtest.portfolio import Backtest
 
 
-b = DataHandler()
+c = DataHandler()
 mo = Momentum()
 r = Ranker()
 w = Get_Weights()
 b = Backtest()
 
-#b.run()
-print(w.weights)
+b.run()
+print(c.fundamental)
