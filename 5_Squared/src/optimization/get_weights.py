@@ -3,6 +3,7 @@ import numpy as np
 from scipy.cluster.hierarchy import linkage, leaves_list
 from scipy.spatial.distance import squareform
 from src.optimization.portfolio_metrics import PortfolioMetrics
+from src.data_handler import DataHandler
 from scipy.optimize import minimize
 
 class GetWeights:
@@ -12,9 +13,25 @@ class GetWeights:
         self.corr = self.returns.corr()
         self.top_n = top_n
         self.max_weight = max_weight
+        self.index = DataHandler().r_index
 
         #self.weights = self._hrp()
-        self.weights = self.opt_sharpe_beta()
+
+        # Sharpe beta optimzation
+        '''beta_weights, beta_summary = self.opt_sharpe_beta(beta_penalty=0.05, max_weight=max_weight, annualize=True)
+        self.weights = beta_weights
+        self.summary = beta_summary'''
+
+        # Alpha optimization
+        alpha_weights, alpha_summary = self.opt_alpha(max_weight=max_weight, top_n=top_n, risk_penalty=0.0, annualize=True)
+        self.weights = alpha_weights
+        self.summary = alpha_summary
+
+        # Alpha optimization from HRP
+        '''alpha_hrp_weights, alpha_hrp_summary = self.opt_alpha_from_hrp(max_weight=max_weight, top_n=top_n, risk_penalty=0.0, hrp_penalty=0.05, annualize=True)
+        self.weights = alpha_hrp_weights
+        self.summary = alpha_hrp_summary'''
+
 
     def _select_tickers(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         valid = [t for t in self.scores.index if t in self.corr.columns]
@@ -93,21 +110,24 @@ class GetWeights:
         return (w / w.sum()).sort_values(ascending=False).round(4)
 
 
-    def opt_sharpe_beta(self, rf = 0.02, beta_penalty = 0.05, max_weight = 0.1, annualize = False):
+    def opt_sharpe_beta(self, beta_penalty = 0.05, max_weight = 0.1, annualize = False):
         valid   = [t for t in self.scores.index if t in self.corr.columns]
         tickers = self.scores[valid].sort_values(ascending=False).head(100).index.unique().tolist()
 
         # Maximize: Sharpe ratio - beta_penalty * beta
 
-        asset_rets = self.returns[tickers].dropna().copy()
+        asset_rets = self.returns.loc[:, tickers].copy()
+        asset_rets = asset_rets.loc[:, ~asset_rets.columns.duplicated(keep="first")]
+        asset_rets = asset_rets.dropna()
+
         benchmark_returns = pd.Series(self.index).dropna().copy()
 
         common_index = asset_rets.index.intersection(benchmark_returns.index)
         asset_rets = asset_rets.loc[common_index]
         benchmark_returns = benchmark_returns.loc[common_index]
 
-        n = len(tickers)
-        metrics = PortfolioMetrics(asset_rets=asset_rets, benchmark_rets=benchmark_returns, rf_annual=rf, periods_per_year=52)
+        n = asset_rets.shape[1]
+        metrics = PortfolioMetrics(asset_rets=asset_rets, benchmark_rets=benchmark_returns, periods_per_year=52)
 
         if metrics.bench_var <= 1e-12:
             raise ValueError('Benchmark variance is too close to zero.')
@@ -149,12 +169,12 @@ class GetWeights:
         return w_opt, summary
 
             
-    """def opt_alpha( self, rf: float = 0.02, max_weight: float = 0.05, top_n: int = 50, risk_penalty: float = 0.0, annualize: bool = False):
+    def opt_alpha( self, max_weight: float = 0.05, top_n: int = 50, risk_penalty: float = 0.0, annualize: bool = False):
         
-        Pure alpha optimizer:
+        '''Pure alpha optimizer:
             max alpha_p - risk_penalty * variance_p
 
-        If risk_penalty = 0, this is pure alpha maximization.
+        If risk_penalty = 0, this is pure alpha maximization.'''
     
         valid = [t for t in self.scores.index if t in self.corr.columns]
         tickers = self.scores.loc[valid].sort_values(ascending=False).head(top_n).index.unique().tolist()
@@ -162,7 +182,7 @@ class GetWeights:
         asset_rets = self.returns[tickers].dropna().copy()
         benchmark_returns = pd.Series(self.index).dropna().copy()
 
-        metrics = PortfolioMetrics(asset_rets=asset_rets, benchmark_rets=benchmark_returns, rf_annual=rf, periods_per_year=52)
+        metrics = PortfolioMetrics(asset_rets=asset_rets, benchmark_rets=benchmark_returns, periods_per_year=52)
 
         n = asset_rets.shape[1]
 
@@ -191,27 +211,23 @@ class GetWeights:
 
         if not res.success:
             raise ValueError(f"Optimization failed: {res.message}")
+        
+        w_opt = pd.Series(res.x, index = tickers, name = 'weight')
+        w_opt = w_opt.sort_values(ascending=False).round(4)
 
-        w_opt = pd.Series(res.x, index=asset_rets.columns, name="weight")
-        w_opt = w_opt[w_opt > 1e-8].sort_values(ascending=False)
-
-        summary = metrics.summary(
-            res.x,
-            objective_value=-objective(res.x),
-            annualize=annualize,
-        )
-        summary["Number of Holdings"] = int((w_opt > 1e-8).sum())
+        summary = metrics.summary(res.x, annualize=annualize)
+        summary['Number of Holdings'] = int((w_opt > 1e-8).sum())
 
         self.alpha_opt_weights = w_opt
         self.alpha_opt_summary = summary
 
         return w_opt, summary
 
-    def opt_alpha_from_hrp(self, rf: float = 0.02, max_weight: float = 0.05,top_n: int = 50, risk_penalty: float = 0.0, hrp_penalty: float = 0.05,
+    def opt_alpha_from_hrp(self, max_weight: float = 0.05,top_n: int = 50, risk_penalty: float = 0.0, hrp_penalty: float = 0.05,
         annualize: bool = False):
         
-        HRP-anchored alpha optimizer:
-            max alpha_p - risk_penalty * variance_p - hrp_penalty * ||w - w_hrp||^2
+        '''HRP-anchored alpha optimizer:
+            max alpha_p - risk_penalty * variance_p - hrp_penalty * ||w - w_hrp||^2'''
         
         w_hrp = self._hrp()
 
@@ -220,7 +236,7 @@ class GetWeights:
         asset_rets = self.returns[tickers].dropna().copy()
         benchmark_returns = pd.Series(self.index).dropna().copy()
 
-        metrics = PortfolioMetrics(asset_rets=asset_rets, benchmark_rets=benchmark_returns, rf_annual=rf, periods_per_year=52)
+        metrics = PortfolioMetrics(asset_rets=asset_rets, benchmark_rets=benchmark_returns, periods_per_year=52)
 
         n = asset_rets.shape[1]
         w_hrp_vec = w_hrp.loc[asset_rets.columns].values
@@ -228,9 +244,9 @@ class GetWeights:
         if n * max_weight < 1 - 1e-12:
             raise ValueError(
                 f"Infeasible optimization: {n} assets with max_weight={max_weight:.2%} cannot sum to 100%."
-            )"""
+            )
 
-"""        def objective(w):
+        def objective(w):
             alpha = metrics.implied_alpha(w, annualize=False)
             variance = float(w @ metrics.cov @ w)
             hrp_distance = float(np.sum((w - w_hrp_vec) ** 2))
@@ -252,14 +268,10 @@ class GetWeights:
         if not res.success:
             raise ValueError(f"Optimization failed: {res.message}")
 
-        w_opt = pd.Series(res.x, index=asset_rets.columns, name="weight")
-        w_opt = w_opt[w_opt > 1e-8].sort_values(ascending=False)
+        w_opt = pd.Series(res.x, index = tickers, name = 'weight')
+        w_opt = w_opt.sort_values(ascending=False).round(4)
 
-        summary = metrics.summary(
-            res.x,
-            objective_value=-objective(res.x),
-            annualize=annualize,
-        )
+        summary = metrics.summary(res.x, annualize=annualize)
         summary["HRP Distance"] = float(np.sum((res.x - w_hrp_vec) ** 2))
         summary["Number of Holdings"] = int((w_opt > 1e-8).sum())
 
@@ -268,5 +280,3 @@ class GetWeights:
         self.hrp_anchor_weights = w_hrp
 
         return w_opt, summary
-    
-"""

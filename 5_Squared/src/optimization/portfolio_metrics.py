@@ -1,9 +1,10 @@
 import numpy as np
 import pandas as pd
-
+from src.data_handler.data_handler import DataHandler
 
 class PortfolioMetrics:
-    def __init__(self, asset_rets: pd.DataFrame, benchmark_rets: pd.Series, rf_annual: float = 0.02, periods_per_year: int = 52):
+    def __init__(self, asset_rets: pd.DataFrame, benchmark_rets: pd.Series, periods_per_year: int = 52, rf_in_percent: bool = False):
+        self.d = DataHandler()
         common_index = asset_rets.index.intersection(benchmark_rets.index)
         self.asset_rets = asset_rets.loc[common_index].copy()
         self.benchmark_rets = benchmark_rets.loc[common_index].copy()
@@ -12,8 +13,7 @@ class PortfolioMetrics:
             raise ValueError("No overlapping observations between assets and benchmark.")
 
         self.periods_per_year = periods_per_year
-        self.rf_annual = rf_annual
-        self.rf_periodic = rf_annual / periods_per_year
+        self.rf_periodic = self.d.rf / 100 if rf_in_percent else self.d.rf
 
         self.mu = self.asset_rets.mean().values
         self.cov = self.asset_rets.cov().values
@@ -35,20 +35,9 @@ class PortfolioMetrics:
     def portfolio_path(self, w):
         return self.asset_rets.values @ w
 
-    def portfolio_beta(self, w: pd.Series, formation_date) -> tuple[float, pd.Series]:
-        formation_date = pd.Timestamp(formation_date)
-
-        beta_row = self.d.beta.loc[:formation_date].iloc[-1]
-
-        common = w.index.intersection(beta_row.index)
-
-        w_aligned = w.loc[common].astype(float)
-        beta_aligned = beta_row.loc[common].astype(float)
-
-        beta_contribution = w_aligned * beta_aligned
-        port_beta = float(beta_contribution.sum())
-
-        return port_beta, beta_contribution
+    def portfolio_beta(self, w):
+        rp = self.asset_rets.values @ w
+        return float(np.cov(rp, self.benchmark_rets.values, ddof=1)[0, 1] / self.bench_var)
 
     def sharpe_ratio(self, w, annualize):
         port_ret = self.portfolio_return(w, annualize)
@@ -57,7 +46,7 @@ class PortfolioMetrics:
         if port_vol <= 1e-12:
             return np.nan
 
-        sharpe = (port_ret - self.rf_periodic) / port_vol
+        sharpe = (port_ret - self.rf_periodic.mean()) / port_vol
 
         if annualize:
             return float(sharpe * np.sqrt(self.periods_per_year))
@@ -69,7 +58,7 @@ class PortfolioMetrics:
         port_ret = self.portfolio_return(w, annualize)
         beta = self.portfolio_beta(w)
 
-        alpha = port_ret - self.rf_periodic - beta * (self.bench_mean - self.rf_periodic)
+        alpha = port_ret - self.rf_periodic.mean() - beta * (self.bench_mean - self.rf_periodic.mean())
 
         if annualize:
             return float(alpha * self.periods_per_year)
