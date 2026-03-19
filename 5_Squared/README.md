@@ -77,6 +77,7 @@ These files include market, benchmark, and factor-related inputs used throughout
 - individual historical asset close prices (full_stocks_14y.xlsx)
 - risk-free rate input and benchmark close prices (sep500_14y.xlsx)
 - values of the factors to be using in scoring (ind_5y.xlsx)
+- other factors that can be tested (three_ind_5y.xlsx)
 
 ## Installation
 1. Clone the repository
@@ -130,6 +131,8 @@ Optimization bugs often come from index or shape mismatches. Before any matrix o
 - benchmark and asset returns share the same time index
 3. Centralize assumptions
 Assumptions such as lookback window, top companies to consider for the portfolio, maximum weight in the portfolio, penalty on beta, whether returns are annualized, should all be explicited in GetWeights().
+4. Backtest period
+The backtest period should be starting in 2022.
 
 ## Outputs
 Depending on the modules enabled, the project can generate:
