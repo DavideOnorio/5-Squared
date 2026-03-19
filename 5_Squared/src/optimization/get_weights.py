@@ -13,19 +13,22 @@ class GetWeights:
         self.corr = self.returns.corr()
         self.top_n = top_n
         self.max_weight = max_weight
-        self.index = DataHandler().r_index
+        self.d = DataHandler()
+        self.index = self.d.r_index
+        self.rf = self.d.rf
+        self.beta = self.d.beta
 
         #self.weights = self._hrp()
 
         # Sharpe beta optimzation
-        '''beta_weights, beta_summary = self.opt_sharpe_beta(beta_penalty=0.05, max_weight=max_weight, annualize=True)
+        beta_weights, beta_summary = self.opt_sharpe_beta(beta_penalty=0.05, max_weight=max_weight, annualize=True)
         self.weights = beta_weights
-        self.summary = beta_summary'''
+        self.summary = beta_summary
 
         # Alpha optimization
-        alpha_weights, alpha_summary = self.opt_alpha(max_weight=max_weight, top_n=top_n, risk_penalty=0.0, annualize=True)
+        '''alpha_weights, alpha_summary = self.opt_alpha(max_weight=max_weight, top_n=top_n, risk_penalty=0.0, annualize=True)
         self.weights = alpha_weights
-        self.summary = alpha_summary
+        self.summary = alpha_summary'''
 
         # Alpha optimization from HRP
         '''alpha_hrp_weights, alpha_hrp_summary = self.opt_alpha_from_hrp(max_weight=max_weight, top_n=top_n, risk_penalty=0.0, hrp_penalty=0.05, annualize=True)
@@ -127,7 +130,17 @@ class GetWeights:
         benchmark_returns = benchmark_returns.loc[common_index]
 
         n = asset_rets.shape[1]
-        metrics = PortfolioMetrics(asset_rets=asset_rets, benchmark_rets=benchmark_returns, periods_per_year=52)
+        rolling_betas = self.beta.reindex(index=asset_rets.index, columns=asset_rets.columns)
+        rf_series = self.rf.reindex(asset_rets.index)
+
+        metrics = PortfolioMetrics(
+            asset_rets=asset_rets,
+            benchmark_rets=benchmark_returns,
+            periods_per_year=52,
+            rf_series=rf_series,
+            rolling_betas=rolling_betas,
+            rf_in_percent="auto",
+        )
 
         if metrics.bench_var <= 1e-12:
             raise ValueError('Benchmark variance is too close to zero.')
@@ -182,7 +195,17 @@ class GetWeights:
         asset_rets = self.returns[tickers].dropna().copy()
         benchmark_returns = pd.Series(self.index).dropna().copy()
 
-        metrics = PortfolioMetrics(asset_rets=asset_rets, benchmark_rets=benchmark_returns, periods_per_year=52)
+        rolling_betas = self.beta.reindex(index=asset_rets.index, columns=asset_rets.columns)
+        rf_series = self.rf.reindex(asset_rets.index)
+
+        metrics = PortfolioMetrics(
+            asset_rets = asset_rets,
+            benchmark_rets = benchmark_returns,
+            periods_per_year = 52,
+            rf_series = rf_series,
+            rolling_betas = rolling_betas,
+            rf_in_percent = "auto",
+        )
 
         n = asset_rets.shape[1]
 
@@ -236,7 +259,17 @@ class GetWeights:
         asset_rets = self.returns[tickers].dropna().copy()
         benchmark_returns = pd.Series(self.index).dropna().copy()
 
-        metrics = PortfolioMetrics(asset_rets=asset_rets, benchmark_rets=benchmark_returns, periods_per_year=52)
+        rolling_betas = self.beta.reindex(index=asset_rets.index, columns=asset_rets.columns)
+        rf_series = self.rf.reindex(asset_rets.index)
+
+        metrics = PortfolioMetrics(
+            asset_rets=asset_rets,
+            benchmark_rets=benchmark_returns,
+            periods_per_year=52,
+            rf_series=rf_series,
+            rolling_betas=rolling_betas,
+            rf_in_percent="auto",
+        )
 
         n = asset_rets.shape[1]
         w_hrp_vec = w_hrp.loc[asset_rets.columns].values
