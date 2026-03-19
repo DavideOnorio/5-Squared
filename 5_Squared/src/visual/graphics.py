@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
 class PortfolioAnalytics:
     def __init__(self, backtest):
@@ -28,6 +29,26 @@ class PortfolioAnalytics:
         plt.fill_between(dd_index.index, dd_index, label="S&P 500")
         plt.ylabel("Drawdown")
         plt.title("Drawdown | Portfolio vs S&P 500")
+        plt.legend()
+        plt.show()
+    
+    def plot_rolling_sharpe(self, window: int = 24):
+        port_sharpe = (
+            self.port_return.rolling(window).mean()
+            / self.port_return.rolling(window).std()
+        ) * np.sqrt(52)
+
+        index_sharpe = (
+            self.index_return.rolling(window).mean()
+            / self.index_return.rolling(window).std()
+        ) * np.sqrt(52)
+
+        plt.figure(figsize=(17, 8))
+        plt.plot(port_sharpe.index, port_sharpe, label="Portfolio", linewidth=2)
+        plt.plot(index_sharpe.index, index_sharpe, label="S&P 500", linewidth=2)
+        plt.axhline(y=0, color="grey", linestyle="--", linewidth=0.8)
+        plt.ylabel("Rolling Sharpe Ratio")
+        plt.title(f"Rolling Sharpe Ratio ({window}-week window)")
         plt.legend()
         plt.show()
 

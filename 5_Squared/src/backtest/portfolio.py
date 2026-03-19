@@ -69,8 +69,7 @@ class Backtest:
         )
         return w.weights
 
-    def _compute_period_return(self, weights: pd.Series, rebal_date: pd.Timestamp,
-                               next_date: pd.Timestamp) -> pd.DataFrame | None:
+    def _compute_period_return(self, weights: pd.Series, rebal_date: pd.Timestamp, next_date: pd.Timestamp) -> pd.DataFrame | None:
         active_tickers = self._get_active_tickers(rebal_date)
         df_r_active = self.df_r[active_tickers]
         df_r_active = df_r_active.loc[:, ~df_r_active.columns.duplicated()]
@@ -112,10 +111,10 @@ class Backtest:
                 all_returns.append(period_return)
 
         portfolio_return = pd.concat(all_returns)
-        index_b = self.index.loc[self.start_date:]
+        index_b = self.index.loc[portfolio_return.index[0]:]
 
         self.port_return = portfolio_return["portfolio_return"]
-        self.cum_portfolio = (1 + self.port_return).cumprod() - 1
-        self.cum_index = (1 + index_b).cumprod() - 1
+        self.cum_portfolio = self.port_return.cumsum()
+        self.cum_index = index_b.cumsum()
 
         return self.port_return

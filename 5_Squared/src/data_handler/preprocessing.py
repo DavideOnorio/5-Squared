@@ -1,4 +1,3 @@
-"""This is for the Z-scoring and Sigma Clipping of the data"""
 import pandas as pd
 
 class DataTransformer:
