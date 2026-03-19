@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 from scipy.cluster.hierarchy import linkage, leaves_list
 from scipy.spatial.distance import squareform
-
+from src.optimization.portfolio_metrics import PortfolioMetrics
+from scipy.optimize import minimize
 
 class GetWeights:
     def __init__(self, log_returns: pd.DataFrame, scores: pd.Series, lookback: int = 52, top_n: int = 50, max_weight: float = 0.05):
@@ -12,7 +13,8 @@ class GetWeights:
         self.top_n = top_n
         self.max_weight = max_weight
 
-        self.weights = self._hrp()
+        #self.weights = self._hrp()
+        self.weights = self.opt_sharpe_beta()
 
     def _select_tickers(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         valid = [t for t in self.scores.index if t in self.corr.columns]
@@ -91,14 +93,14 @@ class GetWeights:
         return (w / w.sum()).sort_values(ascending=False).round(4)
 
 
-    """def opt_sharpe_beta(self, rf = 0.02, beta_penalty = 0.05, max_weight = 0.1, annualize = False):
+    def opt_sharpe_beta(self, rf = 0.02, beta_penalty = 0.05, max_weight = 0.1, annualize = False):
         valid   = [t for t in self.scores.index if t in self.corr.columns]
         tickers = self.scores[valid].sort_values(ascending=False).head(100).index.unique().tolist()
 
         # Maximize: Sharpe ratio - beta_penalty * beta
 
         asset_rets = self.returns[tickers].dropna().copy()
-        benchmark_returns = pd.Series(self.df.r_index).dropna().copy()
+        benchmark_returns = pd.Series(self.index).dropna().copy()
 
         common_index = asset_rets.index.intersection(benchmark_returns.index)
         asset_rets = asset_rets.loc[common_index]
@@ -145,7 +147,7 @@ class GetWeights:
         self.beta_penalized_summary = summary
 
         return w_opt, summary
-"""
+
             
     """def opt_alpha( self, rf: float = 0.02, max_weight: float = 0.05, top_n: int = 50, risk_penalty: float = 0.0, annualize: bool = False):
         
@@ -158,7 +160,7 @@ class GetWeights:
         tickers = self.scores.loc[valid].sort_values(ascending=False).head(top_n).index.unique().tolist()
 
         asset_rets = self.returns[tickers].dropna().copy()
-        benchmark_returns = pd.Series(self.df.r_index).dropna().copy()
+        benchmark_returns = pd.Series(self.index).dropna().copy()
 
         metrics = PortfolioMetrics(asset_rets=asset_rets, benchmark_rets=benchmark_returns, rf_annual=rf, periods_per_year=52)
 
@@ -216,7 +218,7 @@ class GetWeights:
         tickers = w_hrp.index.tolist()
 
         asset_rets = self.returns[tickers].dropna().copy()
-        benchmark_returns = pd.Series(self.df.r_index).dropna().copy()
+        benchmark_returns = pd.Series(self.index).dropna().copy()
 
         metrics = PortfolioMetrics(asset_rets=asset_rets, benchmark_rets=benchmark_returns, rf_annual=rf, periods_per_year=52)
 

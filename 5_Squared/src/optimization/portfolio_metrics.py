@@ -35,9 +35,20 @@ class PortfolioMetrics:
     def portfolio_path(self, w):
         return self.asset_rets.values @ w
 
-    def portfolio_beta(self, w):
-        rp = self.portfolio_path(w)
-        return float(np.cov(rp, self.bench, ddof=1)[0, 1] / self.bench_var)
+    def portfolio_beta(self, w: pd.Series, formation_date) -> tuple[float, pd.Series]:
+        formation_date = pd.Timestamp(formation_date)
+
+        beta_row = self.d.beta.loc[:formation_date].iloc[-1]
+
+        common = w.index.intersection(beta_row.index)
+
+        w_aligned = w.loc[common].astype(float)
+        beta_aligned = beta_row.loc[common].astype(float)
+
+        beta_contribution = w_aligned * beta_aligned
+        port_beta = float(beta_contribution.sum())
+
+        return port_beta, beta_contribution
 
     def sharpe_ratio(self, w, annualize):
         port_ret = self.portfolio_return(w, annualize)
@@ -66,20 +77,6 @@ class PortfolioMetrics:
 
     def benchmark_return(self, annualize):
         return self.bench_mean * self.periods_per_year if annualize else self.bench_mean
-
-    '''def summary(self, w, beta_penalty, annualize):
-        sharpe = self.sharpe_ratio(w, annualize=annualize)
-        beta = self.portfolio_beta(w)
-
-        return {
-            "Return of the Portfolio": self.portfolio_return(w, annualize=annualize),
-            "Return of the Benchmark (S&P 500 Index)": self.benchmark_return(annualize=annualize),
-            "Volatility": self.portfolio_std(w, annualize=annualize),
-            "Sharpe Ratio": float(sharpe),
-            "Beta": float(beta),
-            "Implied Excess Returns vs benchmark (S&P 500 Index)": self.implied_alpha(w, annualize=annualize),
-            "Objective Value": float(-self.sharpe_ratio(w, annualize=annualize) + beta_penalty * beta),
-        }'''
     
     def summary(self, w: np.ndarray, objective_value: float | None = None, annualize: bool = True) -> dict:
         summary = {
