@@ -95,6 +95,7 @@ class Backtest:
         )
         all_returns = []
 
+        print("Starting to backtest....")
         for i, rebal_date in enumerate(rebal_dates):
             next_date = rebal_dates[i + 1] if i + 1 < len(rebal_dates) else self.df_r.index[-1]
 
