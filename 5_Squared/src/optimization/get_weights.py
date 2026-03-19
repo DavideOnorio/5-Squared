@@ -9,7 +9,7 @@ class GetWeights:
                  benchmark_rets: pd.Series, rf_series: pd.Series,
                  rolling_betas: pd.DataFrame,
                  lookback: int = 52, top_n: int = 100, max_weight: float = 0.06,
-                 beta_bonus: float = 0.5, annualize: bool = True):
+                 beta_bonus: float = -0.05, annualize: bool = True):
 
         self.scores = scores
         self.returns = log_returns[-lookback:].dropna(axis=1)
