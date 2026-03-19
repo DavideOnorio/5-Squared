@@ -74,10 +74,9 @@ Raw input files should be stored in:
 data/raw/
 ```
 These files include market, benchmark, and factor-related inputs used throughout the pipeline.
-- individual historical asset close prices
-- benchmark close prices
-- risk-free rate input
-
+- individual historical asset close prices (full_stocks_14y.xlsx)
+- risk-free rate input and benchmark close prices (sep500_14y.xlsx)
+- values of the factors to be using in scoring (ind_5y.xlsx)
 
 ## Installation
 1. Clone the repository
