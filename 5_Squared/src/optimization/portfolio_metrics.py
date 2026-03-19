@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 
-class PortfolioMetrics:
+class PortfolioMetrics_for_optimization:
     def __init__(self, asset_rets: pd.DataFrame, benchmark_rets: pd.Series,
                  rf_series: pd.Series, rolling_betas: pd.DataFrame,
                  periods_per_year: int = 52):

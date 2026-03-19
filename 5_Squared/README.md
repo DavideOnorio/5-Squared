@@ -3,7 +3,6 @@
 A quantitative equity-portfolio construction project for stock ranking, constrained optimization, backtesting, and portfolio evaluation.
 The framework is built to support a full research workflow: ingesting market and fundamental data, transforming it into investable signals, constructing portfolios under maximization problem optimization, and evaluating results against the benchmark (S&P 500).
 
-
 ## Project Structure
 ```text
 5-SQUARED/
