@@ -54,13 +54,19 @@ class Backtest:
         delisted = self._is_delisted(backtest_df)
         return backtest_df.drop(columns=delisted, errors='ignore')
 
-    def _compute_weights(self, backtest_df: pd.DataFrame, fund_backtest: pd.DataFrame) -> pd.Series:
+    def _compute_weights(self, backtest_df: pd.DataFrame, fund_backtest: pd.DataFrame) -> pd.Series | None:
         backtest_log_returns = np.log(backtest_df / backtest_df.shift(1))
 
         mo = Momentum(log_returns=backtest_log_returns)
         mom = mo.momentum_factor()
         r = Ranker(fundamental=fund_backtest, momentum=mom)
-        w = GetWeights(log_returns=backtest_log_returns, scores=r.score)
+        w = GetWeights(
+            log_returns=backtest_log_returns,
+            scores=r.score,
+            benchmark_rets=self.d.r_index,
+            rf_series=self.d.rf,
+            rolling_betas=self.d.beta,
+        )
         return w.weights
 
     def _compute_period_return(self, weights: pd.Series, rebal_date: pd.Timestamp,

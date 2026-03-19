@@ -20,36 +20,18 @@ class DataHandler:
         self.beta = self._compute_rolling_beta(asset_returns=self.all_log_returns,benchmark_returns=self.r_index,window=52)
 
     @staticmethod
-    def _compute_rolling_beta(asset_returns: pd.DataFrame, benchmark_returns: pd.Series, window: int = 52, min_periods: int | None = None) -> pd.DataFrame:
-        if min_periods is None:
-            min_periods = window
+    def _compute_rolling_beta(asset_returns: pd.DataFrame, benchmark_returns: pd.Series,
+                            window: int = 52) -> pd.DataFrame:
+        assets = asset_returns.loc[:, ~asset_returns.columns.duplicated(keep="first")]
+        bench = benchmark_returns.copy()
 
-        asset_returns = asset_returns.copy()
-        asset_returns = asset_returns.loc[:, ~asset_returns.columns.duplicated(keep="first")]
-        benchmark_returns = pd.Series(benchmark_returns).copy()
+        bench_mean = bench.rolling(window).mean()
+        bench_var = bench.rolling(window).var()
 
-        common_index = asset_returns.index.intersection(benchmark_returns.index)
-        asset_returns = asset_returns.loc[common_index].apply(pd.to_numeric, errors="coerce")
-        benchmark_returns = pd.to_numeric(benchmark_returns.loc[common_index], errors="coerce")
+        asset_means = assets.rolling(window).mean()
+        cov = (assets.multiply(bench, axis=0)).rolling(window).mean() - asset_means.multiply(bench_mean, axis=0)
 
-        bench_var = benchmark_returns.rolling(
-            window=window,
-            min_periods=min_periods
-        ).var()
-
-        beta = pd.DataFrame(index=asset_returns.index, columns=asset_returns.columns, dtype=float)
-
-        # beta_i,t = Cov(R_i, R_m) / Var(R_m)
-        for col in asset_returns.columns:
-            cov_i_m = asset_returns[col].rolling(
-                window=window,
-                min_periods=min_periods
-            ).cov(benchmark_returns)
-
-            beta[col] = cov_i_m / bench_var
-
-        beta = beta.replace([np.inf, -np.inf], np.nan)
-        return beta
+        return (cov.div(bench_var, axis=0)).replace([np.inf, -np.inf], np.nan)
 
     @staticmethod
     def _load_fundamental(path: Path) -> pd.DataFrame:
