@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from scipy.optimize import minimize
-from src.optimization.portfolio_metrics import PortfolioMetrics
+from src.optimization.portfolio_metrics import PortfolioMetrics_for_optimization
 
 
 class GetWeights:
@@ -33,12 +33,12 @@ class GetWeights:
             .tolist()
         )
 
-    def _build_metrics(self, tickers: list[str]) -> PortfolioMetrics:
+    def _build_metrics(self, tickers: list[str]) -> PortfolioMetrics_for_optimization:
         asset_rets = self.returns[tickers].dropna()
         asset_rets = asset_rets.loc[:, ~asset_rets.columns.duplicated(keep="first")]
         common = asset_rets.index.intersection(self.benchmark_rets.index)
 
-        return PortfolioMetrics(
+        return PortfolioMetrics_for_optimization(
             asset_rets=asset_rets.loc[common],
             benchmark_rets=self.benchmark_rets.loc[common],
             rf_series=self.rf_series.reindex(common),

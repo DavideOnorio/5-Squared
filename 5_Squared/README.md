@@ -1,137 +1,157 @@
-TO WRITE
+# 5-Squared
 
-- Project title and one-liner
-- Overview of the strategy
-- Project structure (file tree with one-line descriptions)
-- Data requirements (files, location, format, quirks)
-- Installation (Python version, dependencies)
-- Usage (minimal `main.py` example, configurable parameters)
-- Methodology (momentum factor, Lp composite ranking, HRP allocation, score tilt, weight capping)
-- Pipeline flow (DataHandler → Momentum → Ranker → GetWeights → Backtest)
-- Configuration (table of key parameters with defaults)
-- Results (sample output / chart description)
-- Known limitations and future work
-
-# S&P500 Alpha: Dynamic Allocation Challenge
-A systematic equity strategy combining momentum signals, composite ranking, and hierarchical risk parity for robust portfolio construction.
-
-# 1. Overview of the strategy
-The strategy was developed using cross-sectional equity strategy focused on factor-based stock selection, considering core alpha driver - price momentum.
-Portfolio construction integrates:
-- momentum signals
-- Composite ranking
-- Diversification-aware allocation via HRP
-- Comparison model of Sharpe ratio with penalty on beta (avoiding solely market-driven returns)
-Designed to balance:
-- Return (alpha generation)
-- Risk (drawdown & concentration control)
-
-# 2. Project structure
-
-5-Squared/
-│
-├── data/
-│   └── raw/
-│        # uploaded files of data
-│
-├── src/
-│   ├── backtest/
-│   │   ├── portfolio.py               # Backtest logic & performance evaluation
-│   │   └── __pycache__/
-│   │
-│   ├── data_handler/
-│   │   ├── __init__.py
-│   │   ├── data_handler.py            # Data ingestion, alignment, cleanining
-│   │   ├── preprocessing.py           # Data transformations and scaling
-│   │   └── __pycache__/
-│   │
-│   ├── optimization/
-│   │   ├── get_weights.py             # Portfolio construction logic (HRP, optimization)
-│   │   ├── portfolio_metrics.py       # Portfolio auxiliar metrics
-│   │   ├── reasoning.md               # Methodology notes on HRP
-│   │   └── __pycache__/
-│   │
-│   ├── signals/
-│   │   ├── __init__.py
-│   │   ├── momentum.py                # Momentum signal computation
-│   │   ├── ranker.py                  # Cross-sectional ranking (Lp aggregation)
-│   │   └── __pycache__/
-│   │
-│   ├── visual/
-│   │   └── __init__.py                # Visualization utilities (plots, charts)
-│   │
-│   └── __pycache__/
-│
-├── main.py                            # Pipeline entry point
-├── README.md                          # Project documentation
-├── requirements.txt                   # Dependencies
-
-# 3. Data requirements (files, location, format, quirks)
-Input data: weekly prices
-Optional: volumes, fundamentals
-Format: pandas DataFrame, Index: datetime, Columns: tickers
-Location: /data/raw/ for raw xlsx files
-Key quirks: survivorship bias must be addressed
-Missing data: handled via filtering
-Short selling: not allowed
-
-# 4. Installation (Python version, dependencies)
-Python version: Python 3.9+
-Dependencies:
-
-# 5. Methodology
-1. Momentum factor
-Skip most recent period to reduce reversal
-Cross-sectional normalization
-
-2. Ranking
+A quantitative equity-portfolio construction project for stock ranking, constrained optimization, backtesting, and portfolio evaluation.
+The framework is built to support a full research workflow: ingesting market and fundamental data, transforming it into investable signals, constructing portfolios under maximization problem optimization, and evaluating results against the benchmark (S&P 500).
 
 
-3. HRP allocation (Hierarchical Risk Parity)
-- Avoids covariance matrix inversion issues
-Uses:
-    1. Hierarchical clustering
-    2. Quasi-diagonalization
-    3. Recursive bisection
-Leads to: stable allocations, better diversification.
+## Project Structure
+```text
+5-SQUARED/
+└── 5_Squared/
+    ├── data/
+    │   └── raw/
+    │       ├── beta quarterly 14y.xlsx
+    │       ├── full_stocks_14y.xlsx
+    │       ├── ind_5y.xlsx
+    │       ├── read.py
+    │       └── sep500_14y.xlsx
+    │
+    ├── src/
+    │   ├── backtest/
+    │   │   └── portfolio.py
+    │   ├── data_handler/
+    │   │   ├── __init__.py
+    │   │   ├── data_handler.py
+    │   │   └── preprocessing.py
+    │   ├── optimization/
+    │   │   ├── get_weights.py
+    │   │   └── portfolio_metrics.py
+    │   ├── signals/
+    │   │   ├── __init__.py
+    │   │   ├── momentum.py
+    │   │   └── ranker.py
+    │   ├── visual/
+    |   │   ├── graphics.py
+    │   │   └── metrics.py
+    │   ├── __init__.py
+    │   └── main.py
+    ├── README.md
+    └── requirements.txt
+```
 
-4. Maximization of Sharpe Ratio with penalty on Beta
-- Optimization rewarding high excess return per unit of total risk, but also punishing exposure to market beta.
-- Maximizing Sharpe - beta_penalty*Beta <=> Minimizing -(Sharpe -  beta_penalty*Beta)
-- The model computes rolling beta and rf rate (values at the formation date of the portfolio)
-- Without the beta penalty, the optimizer might choose a portfolio with: strong Sharpe, but also high beta (would affect portfolio's alpha). That can happen if the assets with best expected Sharpe are also the ones most sensitive to the benchmark.
-- beta_penalty controls the trade-off:
-    if beta_penalty = 0, pure Sharpe maximization
-    if beta_penalty small, the problem values mostly Sharpe, mild beta control
-    if beta_penalty large, there is strong preference for low-beta portfolios
-- parameter set at 0.05 so that the portfolio gives up a bit of Sharpe in order to reduce beta.
+### Main Components
+- src/data_handler/: data ingestion and preprocessing
+- src/signals/: momentum and ranking logic
+- src/optimization/: portfolio construction and metrics
+- src/backtest/: strategy simulation
+- src/visual/: charts and reporting utilities
+- src/main.py: the project entry point
 
-5. Models maximizing alpha directly
-    1. pure alpha maximization
-    - maximizing portfolio's alpha under weight capping
-    - adding a penalty on portfolio's variance by the parameter risk_penalty
-    2. alpha maximization under HRP
-    - applies HRP (takes the stocks added to the portfolio based on it)
-    - maximizes alpha by rebalancing the weights
+## Overview
+The project follows a modular workflow:
+- Load and preprocess market and fundamental data
+- Generate momentum and factor-based signals
+- Rank securities
+- Optimize portfolio weights
+- Run a backtest
+- Evaluate performance and produce visual outputs
 
-# 6. Pipeline flow
-    1. DataHandler (preparation of data)
-    2. Momentum (feature engineering)
-    3. Ranker (cross-sectional scoring)
-    4. GetWeights (HRP or Sharpe)
-    5. Backtest (performance evaluation)
+### Key Features
+* Fundamental and momentum-driven security selection
+* Transformation of data before signals are fed into the ranking stage
+* Cross-sectional ranking framework for stock scoring
+* Portfolio optimization with practical constraints
+* Support for Sharpe-oriented and beta-aware objectives
+* Historical backtesting versus a benchmark index
+* Performance analytics with return and risk diagnostics
+* Graphical outputs for cumulative returns, drawdowns, and portfolio behavior
+* Modular codebase designed for extension and experimentation
 
-# 7. Configurable parameters
-beta_penalty: indicates how much the beta is controlled
-risk_penalty: indicates how much the variance is influencing the weights optimization in the alpha optimization problem
-hrp_penalty: indicates how far could be the new optimal weights to the initial HRP weights
 
-# 8. Known limitations
-    1. HRP model:
-    - ignores expected returns (pure risk-based) by allocating capital based only on volatility and correlation structure
-    - High-risk assets with strong expected returns may be underweighted
-    - Low-return but low-vol assets may dominate
-    2. Sharpe - beta model: 
-    - sensitive to the beta_penalty parameter
-    - does maximize sharpe ratio and control beta, but is not mathematically identical to alpha maximization
-    3. Alpha models
+## Data
+
+Raw input files should be stored in:
+```bash
+data/raw/
+```
+These files include market, benchmark, and factor-related inputs used throughout the pipeline.
+- individual historical asset close prices
+- benchmark close prices
+- risk-free rate input
+
+
+## Installation
+1. Clone the repository
+```bash
+git clone https://github.com/DavideOnorio/5-Squared
+cd 5-SQUARED/5_Squared
+```
+2. Create and activate a virtual environment
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+On Windows:
+```bash
+.venv\Scripts\activate
+```
+3. Install dependencies
+```bash
+pip install -r requirements.txt
+```
+
+## Run
+From the repository root, run:
+```bash
+python -m src.main
+```
+
+### Usage
+A simple main.py example:
+```bash
+from src.backtest.portfolio import Backtest
+from src.visual.metrics import PortfolioMetrics
+from src.visual.graphics import PortfolioAnalytics
+
+bt = Backtest()
+bt.run()
+
+pm = PortfolioMetrics(bt)
+gr = PortfolioAnalytics(bt)
+
+print(pm.summary())
+```
+
+## Design Principles and Good Practices
+1. Keep modules single-purpose
+Each model has a clearly defined responsibility as mentioned in Main Components (Project Structure)
+2. Validate dimensions before optimization
+Optimization bugs often come from index or shape mismatches. Before any matrix operation, verify that:
+- the selected tickers match the return matrix columns
+- the covariance matrix has the same ordering as the weight vector
+- benchmark and asset returns share the same time index
+3. Centralize assumptions
+Assumptions such as lookback window, top companies to consider for the portfolio, maximum weight in the portfolio, penalty on beta, whether returns are annualized, should all be explicited in GetWeights().
+
+## Outputs
+Depending on the modules enabled, the project can generate:
+- cumulative return chart of strategy versus benchmark
+- drawdown chart
+- portfolio summary statistics
+- risk and return diagnostics
+- ranking tables
+- weight allocations
+- comparative analytics between portfolio and benchmark
+
+## Disclaimer
+This repository is intended for educational, academic and research purposes only, as result of he 5-squared challenge #2. It should not be interpreted as investment advice, and it is not a production-ready trading system without further operational controls.
+
+## Author
+Cristina Lin
+Davide Onorio
+John Russel Stavale Warren
+Raul Vasconcelos da Silva
+Vera Lopes Nunes
+
+LIS - Lisbon Investment Society
+ISEG - Lisbon School of Economics & Management
