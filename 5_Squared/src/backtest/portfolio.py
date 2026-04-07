@@ -13,7 +13,7 @@ class Backtest:
         self.df = self.d.all_closes
         self.fundamental = self.d.fundamental
         self.df_r = self.d.all_log_returns
-        self.full_tickers = self.d.ticker_list
+        self.tickers = self.d.ticker_list
         self.index = self.d.r_index
 
         self.start_date = pd.Timestamp(start_date)
@@ -22,37 +22,9 @@ class Backtest:
         self.cum_portfolio: pd.Series | None = None
         self.cum_index: pd.Series | None = None
 
-    def _filter_tickers(self, backtest_df: pd.DataFrame, year: int) -> pd.DataFrame:
-        if year not in self.full_tickers.columns:
-            year = max(self.full_tickers.columns)
-        tickers = self.full_tickers[year].dropna().tolist()
-        valid_tickers = [t for t in tickers if t in backtest_df.columns]
-        return backtest_df[valid_tickers]
-
-    def _is_delisted(self, backtest_df: pd.DataFrame) -> list[str]:
-        nan_counts = backtest_df.tail(6).isna().sum()
-        return nan_counts[nan_counts >= 2].index.tolist()
-
-    def _get_active_tickers(self, date: pd.Timestamp) -> list[str]:
-        year = date.year
-        if year not in self.full_tickers.columns:
-            year = max(self.full_tickers.columns)
-        tickers = self.full_tickers[year].dropna().tolist()
-        return [t for t in tickers if t in self.df_r.columns]
-
-    def _fill_delisted_returns(self, df_returns: pd.DataFrame) -> pd.DataFrame:
-        filled = df_returns.copy()
-        for col in filled.columns:
-            last_valid = filled[col].last_valid_index()
-            if last_valid and last_valid < filled.index[-1]:
-                filled.loc[last_valid:, col] = filled.loc[last_valid:, col].fillna(0)
-        return filled
-
     def _build_backtest_df(self, rebal_date: pd.Timestamp) -> pd.DataFrame:
-        backtest_df = self.df.copy().truncate(after=rebal_date)
-        backtest_df = self._filter_tickers(backtest_df, rebal_date.year)
-        delisted = self._is_delisted(backtest_df)
-        return backtest_df.drop(columns=delisted, errors='ignore')
+        tickers = self.tickers.T.loc[:rebal_date].iloc[-1].dropna().tolist()
+        return self.df.loc[:rebal_date, [t for t in tickers if t in self.df.columns]]
 
     def _compute_weights(self, backtest_df: pd.DataFrame, fund_backtest: pd.DataFrame) -> pd.Series | None:
         backtest_log_returns = np.log(backtest_df / backtest_df.shift(1))
@@ -70,33 +42,37 @@ class Backtest:
         return w.weights
 
     def _compute_period_return(self, weights: pd.Series, rebal_date: pd.Timestamp, next_date: pd.Timestamp) -> pd.DataFrame | None:
-        active_tickers = self._get_active_tickers(rebal_date)
-        df_r_active = self.df_r[active_tickers]
-        df_r_active = df_r_active.loc[:, ~df_r_active.columns.duplicated()]
-        df_r_active = self._fill_delisted_returns(df_r_active)
+        tickers = self.tickers.T.loc[:rebal_date].iloc[-1].dropna().tolist()
+        df_r = self.df_r[[t for t in tickers if t in self.df_r.columns]]
+        df_r = df_r.loc[:, ~df_r.columns.duplicated()]
 
-        valid_tickers = [t for t in weights.index if t in df_r_active.columns]
-        filtered = df_r_active[valid_tickers]
-        filtered = filtered[(filtered.index >= rebal_date) & (filtered.index < next_date)]
+        valid_tickers = [t for t in weights.index if t in df_r.columns]
+        w = weights[valid_tickers]
+        w = w / w.sum()
+
+        filtered = df_r[valid_tickers]
+        filtered = filtered[(filtered.index > rebal_date) & (filtered.index <= next_date)]
 
         if filtered.empty:
             return None
 
-        return filtered.dot(weights[valid_tickers]).to_frame(name="portfolio_return")
+        simple_r = np.exp(filtered.fillna(0)) - 1
+        port_simple = simple_r.dot(w)
+        port_log = np.log(1 + port_simple)
+
+        return port_log.to_frame(name="portfolio_return")
 
     def run(self) -> pd.Series:
-
         fund_dates = self.fundamental.index.unique().sort_values()
         prior = fund_dates[fund_dates <= self.start_date]
         first_date = prior[-1] if len(prior) > 0 else fund_dates[0]
 
-        rebal_dates = sorted(
-            fund_dates[fund_dates >= first_date].tolist()
-        )
+        rebal_dates = sorted(fund_dates[fund_dates >= first_date].tolist())
         all_returns = []
 
         print("Starting to backtest....")
         for i, rebal_date in enumerate(rebal_dates):
+
             next_date = rebal_dates[i + 1] if i + 1 < len(rebal_dates) else self.df_r.index[-1]
 
             backtest_df = self._build_backtest_df(rebal_date)

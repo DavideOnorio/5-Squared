@@ -7,7 +7,7 @@ class DataHandler:
     def __init__(self, base_path: str | Path = Path("5_Squared") / "data" / "raw"):
         base_path = Path(base_path)
 
-        self.fundamental = self._load_fundamental(base_path / "ind_5y.xlsx")
+        self.fundamental = self._load_fundamental(base_path / "test.xlsx")
         self.all_closes = self._load_closes(base_path / "sep500_14y.xlsx")
         self.ticker_list = self._load_ticker_list(base_path / "full_stocks_14y.xlsx")
 
