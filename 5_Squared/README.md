@@ -74,7 +74,8 @@ Raw input files should be stored in:
 data/raw/
 ```
 These files include market, benchmark, and factor-related inputs used throughout the pipeline.
-- individual historical asset close prices (full_stocks_14y.xlsx)
+- individual historical asset close prices (sep500_14y.xlsx)
+- Ticker list of every S&P 500 component (full_stocks_14y.xlsx)
 - risk-free rate input and benchmark close prices (sep500_14y.xlsx)
 - values of the factors to be using in scoring (ind_5y.xlsx)
 - other factors that can be tested (three_ind_5y.xlsx)
@@ -131,8 +132,6 @@ Optimization bugs often come from index or shape mismatches. Before any matrix o
 - benchmark and asset returns share the same time index
 3. Centralize assumptions
 Assumptions such as lookback window, top companies to consider for the portfolio, maximum weight in the portfolio, penalty on beta, whether returns are annualized, should all be explicited in GetWeights().
-4. Backtest period
-The backtest period should be starting in 2022.
 
 ## Outputs
 Depending on the modules enabled, the project can generate:
@@ -145,14 +144,16 @@ Depending on the modules enabled, the project can generate:
 - comparative analytics between portfolio and benchmark
 
 ## Disclaimer
-This repository is intended for educational, academic and research purposes only, as result of he 5-squared challenge #2. It should not be interpreted as investment advice, and it is not a production-ready trading system without further operational controls.
+This repository is intended for educational, academic and research purposes only, as result of the 5-squared challenge #2. It should not be interpreted as investment advice.
 
-## Author
-Cristina Lin
-Davide Onorio
-John Russel Stavale Warren
-Raul Vasconcelos da Silva
-Vera Lopes Nunes
+## Authors
+- **Davide Onorio** — project lead
+- **Cristina Lin** — portfolio optimization
 
-LIS - Lisbon Investment Society
-ISEG - Lisbon School of Economics & Management
+## Acknowledgements
+Special thanks to **Raul Vascos** for his support with data collection.
+
+---
+
+LIS — Lisbon Investment Society  
+ISEG — Lisbon School of Economics & Management
